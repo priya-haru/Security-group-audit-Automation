@@ -1,0 +1,123 @@
+#!/usr/local/bin/python3
+from __future__ import print_function
+
+import boto3
+
+# Explicitly declaring variables here grants them global scope
+cidr_block = ""
+ip_protpcol = ""
+from_port = ""
+to_port = ""
+from_source = ""
+
+
+print("%s,%s,%s,%s,%s,%s,%s,%s" % ("Instance-ID", "Group-Name",
+      "Group-ID", "In/Out", "Protocol", "Port", "Source/Destination", "Rule-Description"))
+
+for region in ["us-east-1", "us-west-1", "us-west-2", "ap-south-1"]:
+    ec2 = boto3.client('ec2', region)
+    reservations = ec2.describe_instances().get("Reservations")
+    for reservation in reservations:
+        for instance in reservation['Instances']:                                          
+            instanceId = instance.get("InstanceId")
+            networkinterfaces = instance.get("NetworkInterfaces")
+            for networkinterface in networkinterfaces:
+                sgGroups = networkinterface.get("Groups")
+                for sgGroup in sgGroups:
+                    sgId = sgGroup.get("GroupId")
+                    sgIdList = sgId.split("delimiter")
+                    sgs = ec2.describe_security_groups(GroupIds=sgIdList)[
+                        "SecurityGroups"]
+                    for sg in sgs:
+                        group_name = sg['GroupName']
+                        group_id = sg['GroupId']
+                        print("%s,%s,%s" % (instanceId, group_name, group_id))
+                        # InBound permissions ##########################################
+                        inbound = sg['IpPermissions']
+                        #print("%s,%s,%s,%s" % ("", "", "", "Inbound"))
+                        for rule in inbound:
+                            if rule['IpProtocol'] == "-1":
+                                traffic_type = "All Trafic"
+                                ip_protpcol = "All"
+                                to_port = "All"
+                            else:
+                                ip_protpcol = rule['IpProtocol']
+                                from_port = rule['FromPort']
+                                to_port = rule['ToPort']
+                                #If ICMP, report "N/A" for port #
+                                if to_port == -1:
+                                    to_port = "N/A"
+
+                            # Is source/target an IP v4?
+                            if len(rule['IpRanges']) > 0:
+                                for ip_range in rule['IpRanges']:
+                                    cidr_block = ip_range['CidrIp']
+                                    try:
+                                       description = ip_range['Description']
+                                    except:
+                                       description=""
+                                    print("%s,%s,%s,%s,%s,%s,%s,%s" %
+                                          ("", "", "", "Inbound", ip_protpcol, to_port, 	cidr_block, description))
+
+                            # Is source/target an IP v6?
+                            if len(rule['Ipv6Ranges']) > 0:
+                                for ip_range in rule['Ipv6Ranges']:
+                                    cidr_block = ip_range['CidrIpv6']
+                                    try:
+                                       description = ip_range['Description']
+                                    except:
+                                       description = ""
+                                    print("%s,%s,%s,%s,%s,%s,%s,%s" %
+                                          ("", "", "", "Inbound", ip_protpcol, to_port, 	cidr_block,description))
+
+                            # Is source/target a security group?
+                            if len(rule['UserIdGroupPairs']) > 0:
+                                for source in rule['UserIdGroupPairs']:
+                                    from_source = source['GroupId']
+                                    print("%s,%s,%s,%s,%s,%s,%s" %
+                                          ("", "", "", "Inbound", ip_protpcol, to_port, 	from_source))
+
+                        # OutBound permissions ##########################################
+                        outbound = sg['IpPermissionsEgress']
+                        #print("%s,%s,%s,%s" % ("", "", "", "Outbound"))
+                        for rule in outbound:
+                            if rule['IpProtocol'] == "-1":
+                                traffic_type = "All Trafic"
+                                ip_protpcol = "All"
+                                to_port = "All"
+                            else:
+                                ip_protpcol = rule['IpProtocol']
+                                from_port = rule['FromPort']
+                                to_port = rule['ToPort']
+                                #If ICMP, report "N/A" for port #
+                                if to_port == -1:
+                                    to_port = "N/A"
+
+                            # Is source/target an IP v4?
+                            if len(rule['IpRanges']) > 0:
+                                for ip_range in rule['IpRanges']:
+                                    cidr_block = ip_range['CidrIp']
+                                    try:
+                                       description = ip_range['Description']
+                                    except:
+                                       description = ""
+                                    print("%s,%s,%s,%s,%s,%s,%s,%s" %
+                                          ("", "", "", "Outbound", ip_protpcol, to_port, 	cidr_block, description))
+
+                            # Is source/target an IP v6?
+                            if len(rule['Ipv6Ranges']) > 0:
+                                for ip_range in rule['Ipv6Ranges']:
+                                    cidr_block = ip_range['CidrIpv6']
+                                    try:
+                                       description = ip_range['Description']
+                                    except:
+                                       description = ""
+                                    print("%s,%s,%s,%s,%s,%s,%s,%s" %
+                                          ("", "", "", "Outbound", ip_protpcol, to_port, 	cidr_block, description))
+
+                            # Is source/target a security group?
+                            if len(rule['UserIdGroupPairs']) > 0:
+                                for source in rule['UserIdGroupPairs']:
+                                    from_source = source['GroupId']
+                                    print("%s,%s,%s,%s,%s,%s,%s" %
+                                          ("", "", "", "Outbound", ip_protpcol, to_port, 	from_source))
