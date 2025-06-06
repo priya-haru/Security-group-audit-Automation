@@ -20,11 +20,11 @@ def call(Map buildParams) {
         }
 
         environment {
-            PYTHON_BASE_IMAGE_TAG = 'docker-airbus-virtual.artifactory.2b82.aws.cloud.airbus.corp/jenkins/slaves/python:3.11'
-            PYTHON_FINAL_CONTAINER = 'artifactory.fr.eu.airbus.corp:40009/devops/python311:1.0.1'
+            PYTHON_BASE_IMAGE_TAG = 'docker-****-virtual.artifactory.2b82.aws.cloud.****.corp/jenkins/slaves/python:3.11'
+            PYTHON_FINAL_CONTAINER = 'artifactory.fr.eu.****.corp:40009/devops/python311:1.0.1'
             PYTHON_FILE_NAME = 'passwordCertExpiryChecker'
 
-            CONFLUENCE_PAGE_TOKENS = '336679545'
+            CONFLUENCE_PAGE_TOKENS = '123456789'
             CONFLUENCE_PAGE_CERTIFICATES = '364196392'
 
             EXPIRY_DATE_COLUMN_NAME_TOKENS = 'Next expiration date'
