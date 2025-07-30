@@ -1,0 +1,17 @@
+---
+galaxy_info:
+  author: Priyanka C
+  description: Role to remount_recovery
+  license: None
+  min_ansible_version: 2.16.7
+  platforms:
+    - name: Windows
+      versions:
+        - all
+    - name: GenericLinux
+      versions:
+        - all
+  galaxy_tags:
+    - redhat
+    - linux
+    
