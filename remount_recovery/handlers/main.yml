@@ -1,0 +1,10 @@
+---
+- name: umount {{ required_mount_path }}
+  ansible.builtin.command: "umount {{ required_mount_path }}"
+  ignore_errors: true
+  changed_when: true
+
+- name: mount {{ required_mount_path }}
+  ansible.builtin.command: "mount {{ required_mount_path }}"
+  ignore_errors: true
+  changed_when: true
