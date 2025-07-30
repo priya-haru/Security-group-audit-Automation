@@ -1,0 +1,88 @@
+---
+# Main logic for remount recovery
+# This playbook ensures that a specified path is properly mounted.
+# It attempts recovery by restarting services and will reboot the server as a last resort.
+# WARNING: The server WILL REBOOT if all mount recovery attempts fail.
+
+- name: Check if {{ required_mount_path }} is mounted
+  ansible.builtin.command: "mountpoint -q {{ required_mount_path }}"
+  register: mount_check
+  changed_when: false
+  ignore_errors: true
+
+- name: Notify umount handler if already mounted
+  ansible.builtin.debug:
+    msg: "Will umount {{ required_mount_path }}"
+  when: mount_check.rc == 0
+  notify:
+    - umount required_mount_path
+
+- name: Notify mount handler if not mounted
+  ansible.builtin.debug:
+    msg: "Will mount {{ required_mount_path }}"
+  when: mount_check.rc != 0
+  notify:
+    - mount required_mount_path
+
+- name: Check mount status after handlers
+  ansible.builtin.command: "mountpoint -q {{ required_mount_path }}"
+  register: mount_check_1
+  changed_when: false
+  ignore_errors: true
+
+- name: Gather service facts
+  ansible.builtin.service_facts:
+
+- name: Restart vasd service if mount failed and service exists
+  ansible.builtin.service:
+    name: vasd
+    state: restarted
+  when:
+    - mount_check_1.rc != 0
+    - "'vasd.service' in ansible_facts.services"
+  register: vasd_restart
+
+- name: Notify mount handler after vasd restart
+  ansible.builtin.debug:
+    msg: "Will mount {{ required_mount_path }} after vasd restart"
+  when:
+    - vasd_restart.changed
+  notify:
+    - mount required_mount_path
+
+- name: Check mount status after vasd retry
+  ansible.builtin.command: "mountpoint -q {{ required_mount_path }}"
+  register: mount_check_2
+  changed_when: false
+  ignore_errors: true
+
+- name: Restart autofs service if mount still failed
+  ansible.builtin.service:
+    name: autofs
+    state: restarted
+  when: mount_check_2.rc != 0
+  register: autofs_restart
+
+- name: Notify mount handler after autofs restart
+  ansible.builtin.debug:
+    msg: "Will mount {{ required_mount_path }} after autofs restart"
+  when: autofs_restart.changed
+  notify:
+    - mount required_mount_path
+
+- name: Final mount status check
+  ansible.builtin.command: "mountpoint -q {{ required_mount_path }}"
+  register: mount_check_3
+  changed_when: false
+  ignore_errors: true
+
+- name: Fail if mount still unsuccessful
+  ansible.builtin.fail:
+    msg: "Failed to mount {{ required_mount_path }} after all recovery attempts"
+  when: mount_check_3.rc != 0 and not ansible_check_mode
+
+- name: Reboot server as last resort
+  ansible.builtin.reboot:
+    msg: "Rebooting server to recover mount issues"
+    reboot_timeout: 600
+  when: mount_check_3.rc != 0
